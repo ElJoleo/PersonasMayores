@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protección Mayor - Prevención de Estafas</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+        @keyframes slide-up { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
+        .rotate-3 { transform: rotate(3deg); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <script src="secrets.js"></script> 
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- 1. CONFIGURACIÓN INICIAL ---
+        const { useState, useEffect, useRef } = React;
+
+        // --- CAMBIO #2: DEFINICIÓN SEGURA DE LA API KEY ---
+        // Si la variable de "secrets.js" existe (estás en tu PC), usa el valor local.
+        // Si no existe (estás en GitHub/Vercel), usa una cadena vacía ("").
+        const apikey = typeof GEMINI_API_KEY_LOCAL !== 'undefined' ? GEMINI_API_KEY_LOCAL : "";
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+
+        // --- 2. ADAPTADOR DE ICONOS (Para que funcionen en HTML) ---
+        // Este bloque convierte los nombres de Lucide React a etiquetas HTML <i>
+        const Icon = ({ name, size = 24, className = "" }) => {
+            // Renderizamos un 'i' que lucide.createIcons transformará en SVG
+            return <i data-lucide={name} width={size} height={size} className={className}></i>;
+        };
+
+        // Definimos los componentes de iconos que usas en tu código original
+        const Shield = (p) => <Icon name="shield" {...p} />;
+        const Phone = (p) => <Icon name="phone" {...p} />;
+        const Users = (p) => <Icon name="users" {...p} />;
+        const Clock = (p) => <Icon name="clock" {...p} />;
+        const Gift = (p) => <Icon name="gift" {...p} />;
+        const Lock = (p) => <Icon name="lock" {...p} />;
+        const Heart = (p) => <Icon name="heart" {...p} />;
+        const Info = (p) => <Icon name="info" {...p} />;
+        const MessageCircle = (p) => <Icon name="message-circle" {...p} />;
+        const Menu = (p) => <Icon name="menu" {...p} />;
+        const X = (p) => <Icon name="x" {...p} />;
+        const CreditCard = (p) => <Icon name="credit-card" {...p} />;
+        const AlertTriangle = (p) => <Icon name="alert-triangle" {...p} />;
+        const CheckCircle2 = (p) => <Icon name="check-circle-2" {...p} />;
+        const PhoneCall = (p) => <Icon name="phone-call" {...p} />;
+        const Landmark = (p) => <Icon name="landmark" {...p} />;
+        const Play = (p) => <Icon name="play" {...p} />;
+        const Video = (p) => <Icon name="video" {...p} />;
+        const Search = (p) => <Icon name="search" {...p} />;
+        const Send = (p) => <Icon name="send" {...p} />;
+        const Loader2 = (p) => <Icon name="loader-2" {...p} />;
+        const Bot = (p) => <Icon name="bot" {...p} />;
+        const Sparkles = (p) => <Icon name="sparkles" {...p} />;
+
+
+        // --- 3. LÓGICA DE GEMINI API ---
+        async function callGeminiAPI(prompt, systemInstruction = "") {
+            if (!apikey) return "⚠️ Error: Falta la Clave API en el código (línea 38).";
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apikey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            try {
+                const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, no pude entender eso. ¿Podría repetirlo?";
+            } catch (error) {
+                console.error("Error calling Gemini:", error);
+                return "Hubo un problema temporal. Por favor intente de nuevo más tarde.";
+            }
+        }
+
+        // --- 4. TUS COMPONENTES (Copiados de tu código original) ---
+
+        // Componente del Analizador de Estafas
+        const ScamAnalyzer = ({ fontClass }) => {
+            const [inputText, setInputText] = useState("");
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            const handleAnalyze = async () => {
+                if (!inputText.trim()) return;
+                setLoading(true);
+                setResult(null);
+
+                const systemPrompt = "Eres un experto en ciberseguridad amable y paciente, especializado en ayudar a adultos mayores. Tu tarea es analizar textos sospechosos (SMS, correos, WhatsApp) que reciben los usuarios. Determina si es probable que sea una estafa. Tu respuesta debe tener 3 partes claras: 1) Veredicto (Seguro, Sospechoso o Peligroso), 2) Explicación simple (sin tecnicismos), 3) Consejo de acción inmediato. Sé empático y claro.";
+                
+                const userPrompt = `Analiza este mensaje que recibí: "${inputText}"`;
+                
+                const response = await callGeminiAPI(userPrompt, systemPrompt);
+                setResult(response);
+                setLoading(false);
+            };
+
+            return (
+                <section className="py-16 px-4 bg-gradient-to-br from-indigo-50 to-purple-50">
+                <div className="max-w-4xl mx-auto">
+                    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-purple-100">
+                    <div className="bg-purple-700 p-6 text-white text-center">
+                        <div className="flex justify-center mb-3">
+                        <Sparkles className="w-12 h-12 text-yellow-300 animate-pulse" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-2">Analizador de Mensajes ✨</h2>
+                        <p className="text-purple-100">¿Recibió un mensaje extraño? Péguelo aquí y nuestra Inteligencia Artificial le dirá si es seguro.</p>
+                    </div>
+                    
+                    <div className="p-6 md:p-8">
+                        <label className="block text-gray-700 font-bold mb-2 text-lg">Escriba o pegue el mensaje aquí:</label>
+                        <textarea
+                        className="w-full p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring focus:ring-purple-200 transition-all text-lg h-32 resize-none"
+                        placeholder='Ejemplo: "Hola abuela, cambié mi número, necesito dinero urgente..."'
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        ></textarea>
+                        
+                        <div className="mt-4 flex justify-end">
+                        <button 
+                            onClick={handleAnalyze}
+                            disabled={loading || !inputText}
+                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-bold text-white text-lg shadow-lg transition-all ${loading || !inputText ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 hover:scale-105'}`}
+                        >
+                            {loading ? <Loader2 className="animate-spin" /> : <Search size={24} />}
+                            {loading ? "Analizando..." : "Analizar Mensaje"}
+                        </button>
+                        </div>
+
+                        {result && (
+                        <div className="mt-8 bg-purple-50 rounded-2xl p-6 border-l-8 border-purple-600 animate-fade-in">
+                            <h3 className="text-xl font-bold text-purple-800 mb-3 flex items-center gap-2">
+                            <Bot size={28} /> Respuesta del Asistente:
+                            </h3>
+                            <div className={`prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed ${fontClass}`}>
+                            {result}
+                            </div>
+                        </div>
+                        )}
+                    </div>
+                    </div>
+                </div>
+                </section>
+            );
+        };
+
+        // Componente del Chatbot Flotante
+        const FloatingChatbot = ({ fontClass }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [messages, setMessages] = useState([
+                { role: 'system', text: '¡Hola! Soy su asistente virtual "Protector Mayor". Estoy aquí para responder sus dudas sobre seguridad y tecnología. ¿En qué puedo ayudarle hoy?' }
+            ]);
+            const [input, setInput] = useState("");
+            const [isTyping, setIsTyping] = useState(false);
+            const chatEndRef = useRef(null);
+
+            useEffect(() => {
+                if (isOpen && chatEndRef.current) {
+                chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+                }
+            }, [messages, isOpen]);
+
+            const handleSend = async () => {
+                if (!input.trim()) return;
+
+                const userMsg = input;
+                setInput("");
+                setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+                setIsTyping(true);
+
+                const systemPrompt = "Eres 'Protector Mayor', un asistente virtual chileno, amable y muy paciente diseñado para ayudar a adultos mayores. Responde preguntas sobre cómo evitar estafas, usar el celular, o seguridad bancaria. Usa un lenguaje muy sencillo, cálido y respetuoso (trata de 'usted'). Sé conciso. Nunca pidas datos personales reales. Si preguntan algo peligroso, advierte con firmeza pero cariño.";
+                
+                const recentContext = messages.slice(-4).map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.text}`).join('\n');
+                const fullPrompt = `${recentContext}\nUsuario: ${userMsg}\nAsistente:`;
+
+                const reply = await callGeminiAPI(fullPrompt, systemPrompt);
+                
+                setMessages(prev => [...prev, { role: 'system', text: reply }]);
+                setIsTyping(false);
+            };
+
+            return (
+                <React.Fragment>
+                {/* Botón Flotante */}
+                {!isOpen && (
+                    <div className="fixed bottom-6 right-6 z-50">
+                    <button 
+                        onClick={() => setIsOpen(true)}
+                        className="bg-blue-800 hover:bg-blue-900 text-white p-4 rounded-full shadow-lg flex items-center gap-2 transition-transform hover:scale-105 border-4 border-white"
+                    >
+                        <MessageCircle size={32} />
+                        <span className="font-bold text-lg hidden md:inline">Asistente Virtual ✨</span>
+                    </button>
+                    </div>
+                )}
+
+                {/* Ventana de Chat */}
+                {isOpen && (
+                    <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[80vh] overflow-hidden animate-slide-up">
+                    {/* Header */}
+                    <div className="bg-blue-800 p-4 text-white flex justify-between items-center shadow-md">
+                        <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-full">
+                            <Bot size={24} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg leading-tight">Protector Mayor ✨</h3>
+                            <p className="text-xs text-blue-200">Siempre aquí para ayudarle</p>
+                        </div>
+                        </div>
+                        <button onClick={() => setIsOpen(false)} className="hover:bg-blue-700 p-1 rounded-full transition-colors">
+                        <X size={24} />
+                        </button>
+                    </div>
+
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
+                        {messages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div 
+                            className={`max-w-[85%] p-3 rounded-2xl text-lg ${
+                                msg.role === 'user' 
+                                ? 'bg-blue-600 text-white rounded-br-none' 
+                                : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
+                            } ${fontClass}`}
+                            >
+                            {msg.text}
+                            </div>
+                        </div>
+                        ))}
+                        {isTyping && (
+                        <div className="flex justify-start">
+                            <div className="bg-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center">
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-75"></div>
+                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150"></div>
+                            </div>
+                        </div>
+                        )}
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="p-4 bg-white border-t border-gray-100">
+                        <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            placeholder="Escriba su duda aquí..."
+                            className="flex-1 p-3 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg"
+                        />
+                        <button 
+                            onClick={handleSend}
+                            disabled={!input.trim() || isTyping}
+                            className={`p-3 rounded-full text-white transition-colors ${!input.trim() ? 'bg-gray-300' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        >
+                            <Send size={24} />
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
+                </React.Fragment>
+            );
+        };
+
+        // Componente Principal
+        const App = () => {
+            const [fontSizeLevel, setFontSizeLevel] = useState(1);
+            
+            const getFontSizeClass = () => {
+                switch(fontSizeLevel) {
+                    case 0: return 'text-base';
+                    case 1: return 'text-lg';
+                    case 2: return 'text-xl';
+                    default: return 'text-lg';
+                }
+            };
+
+            const fontClass = getFontSizeClass();
+
+            // Esto hace que los iconos se rendericen cuando React termine
+            useEffect(() => {
+                lucide.createIcons();
+            });
+            // También necesitamos ejecutarlo cuando cambie algo en la interfaz
+            useEffect(() => {
+                lucide.createIcons();
+            }, [fontSizeLevel, /* otras dependencias si hubiera */]);
+
+
+            return (
+                <div className={`min-h-screen bg-gray-50 font-sans text-gray-800 ${fontClass} transition-all duration-300`}>
+                
+                <FloatingChatbot fontClass={fontClass} />
+
+                <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-40 py-3 px-4 md:px-8">
+                    <div className="max-w-6xl mx-auto flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <Shield className="text-purple-600 fill-purple-100" size={32} />
+                        <span className="font-bold text-xl md:text-2xl text-purple-800">Protección Mayor</span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-inner border border-gray-200">
+                        <button 
+                            onClick={() => setFontSizeLevel(0)}
+                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 0 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+                            title="Tamaño Normal"
+                        >
+                            <span className="text-sm">A</span>
+                        </button>
+                        <button 
+                            onClick={() => setFontSizeLevel(1)}
+                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 1 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+                            title="Tamaño Grande"
+                        >
+                            <span className="text-lg">A</span>
+                        </button>
+                        <button 
+                            onClick={() => setFontSizeLevel(2)}
+                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 2 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+                            title="Tamaño Muy Grande"
+                        >
+                            <span className="text-2xl">A</span>
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                </nav>
+
+                <main className="pt-20">
+                    
+                    {/* HERO SECTION */}
+                    <section className="bg-gradient-to-r from-blue-700 via-purple-700 to-pink-600 text-white py-16 px-4 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
+                    <div className="max-w-4xl mx-auto text-center relative z-10 space-y-6">
+                        <div className="flex justify-center mb-4">
+                        <Shield className="w-20 h-20 text-yellow-300 drop-shadow-lg" />
+                        </div>
+                        <h1 className="text-3xl md:text-5xl font-bold leading-tight drop-shadow-md">
+                        Prevención del Maltrato y <br/>
+                        <span className="text-yellow-300">Abuso Económico</span> en <br/>
+                        <span className="text-pink-200">Personas Mayores</span>
+                        </h1>
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 md:p-8 max-w-3xl mx-auto border border-white/20 shadow-xl mt-8">
+                        <p className="text-lg md:text-xl mb-6 font-medium">
+                            Te entregamos herramientas claras, simples y útiles para que puedas reconocer situaciones de riesgo y protegerte de estafas comunes.
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-3">
+                            <span className="bg-blue-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                            <CheckCircle2 size={20} /> Información Clara
+                            </span>
+                            <span className="bg-purple-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                            <CheckCircle2 size={20} /> Fácil de Entender
+                            </span>
+                            <span className="bg-pink-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                            <CheckCircle2 size={20} /> Protección Real
+                            </span>
+                        </div>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* WHY SCAMS HAPPEN */}
+                    <section className="max-w-5xl mx-auto px-4 -mt-8 relative z-20">
+                    <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-6 md:p-8 text-white shadow-xl text-center">
+                        <div className="flex justify-center mb-3">
+                        <div className="bg-white/20 p-3 rounded-full">
+                            <Info size={32} className="text-white" />
+                        </div>
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-4">¿Por Qué Ocurren Estas Estafas?</h2>
+                        <p className="text-lg leading-relaxed">
+                        Los estafadores usan la <span className="bg-yellow-400 text-red-900 px-2 rounded font-bold mx-1">manipulación emocional</span>, 
+                        crean <span className="bg-yellow-400 text-red-900 px-2 rounded font-bold mx-1">urgencia</span> y aprovechan la 
+                        <span className="bg-yellow-400 text-red-900 px-2 rounded font-bold mx-1">confianza</span> para que actúe sin verificar primero.
+                        </p>
+                    </div>
+                    </section>
+
+                    {/* 3 GOLDEN RULES */}
+                    <section className="py-16 px-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-12">
+                        <div className="bg-yellow-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                            <Shield className="text-yellow-600 w-8 h-8" />
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-3">Las 3 Reglas de Oro</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            Memorice estas tres reglas simples. Le ayudarán a protegerse en cualquier situación.
+                        </p>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-6">
+                        {/* Rule 1 */}
+                        <div className="bg-white rounded-3xl border-4 border-blue-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                            <div className="p-6 text-center">
+                            <div className="bg-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
+                                <Clock />
+                            </div>
+                            <div className="absolute top-6 right-6 bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Nunca Actúe con Urgencia</h3>
+                            
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
+                                <p className="text-gray-700">Si alguien le presiona para tomar una decisión rápida con dinero, es una señal de <span className="font-bold text-red-600">ALERTA</span>.</p>
+                            </div>
+                            
+                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 flex items-start gap-3 text-left">
+                                <CheckCircle2 className="text-blue-600 shrink-0 mt-1" />
+                                <p className="text-blue-800 font-medium">Tómese su tiempo. Las cosas importantes pueden esperar.</p>
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Rule 2 */}
+                        <div className="bg-white rounded-3xl border-4 border-purple-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                            <div className="p-6 text-center relative">
+                            <div className="bg-purple-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
+                                <Users />
+                            </div>
+                            <div className="absolute top-0 right-0 m-6 bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Consulte con Alguien de Confianza</h3>
+                            
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
+                                <p className="text-gray-700">Antes de entregar dinero, datos personales o firmar algo, hable con un familiar o amigo cercano.</p>
+                            </div>
+                            
+                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 flex items-start gap-3 text-left">
+                                <CheckCircle2 className="text-purple-600 shrink-0 mt-1" />
+                                <p className="text-purple-800 font-medium">Una segunda opinión puede salvarle de una estafa.</p>
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Rule 3 */}
+                        <div className="bg-white rounded-3xl border-4 border-orange-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                            <div className="p-6 text-center relative">
+                            <div className="bg-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
+                                <Shield />
+                            </div>
+                            <div className="absolute top-0 right-0 m-6 bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Proteja Sus Datos Personales</h3>
+                            
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
+                                <p className="text-gray-700">Sus claves, contraseñas, RUT y datos bancarios son <span className="font-bold">SOLO SUYOS</span>. Nadie legítimo se los pedirá.</p>
+                            </div>
+                            
+                            <div className="bg-orange-50 rounded-xl p-4 border border-orange-100 flex items-start gap-3 text-left">
+                                <AlertTriangle className="text-yellow-600 shrink-0" />
+                                <p className="text-orange-800 font-medium">Si alguien los solicita, cuelgue o ignore el mensaje.</p>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* COMMON SCAMS */}
+                    <section className="py-16 px-4 bg-orange-50/50">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold text-red-600 mb-3">Estafas Más Comunes</h2>
+                        <p className="text-gray-600">Estas son las estafas que más afectan a las personas mayores. ¡Conócelas para protegerte!</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-8">
+                        {/* Scam 1 */}
+                        <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-orange-400">
+                            <div className="p-8 text-center">
+                            <div className="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Gift className="text-orange-500 w-10 h-10" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Premios Falsos</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
+                                <p>Le dicen que ganó un premio, sorteo o lotería, pero debe pagar primero para recibirlo.</p>
+                            </div>
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
+                                <AlertTriangle className="text-yellow-600 shrink-0" />
+                                <p className="text-sm font-semibold text-yellow-800">Si ganó algo real, NUNCA le pedirán dinero para entregárselo.</p>
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Scam 2 */}
+                        <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-red-400">
+                            <div className="p-8 text-center">
+                            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Phone className="text-red-500 w-10 h-10" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Secuestros Simulados</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
+                                <p>Llaman diciendo que tienen secuestrado a un familiar y exigen dinero urgente.</p>
+                            </div>
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
+                                <AlertTriangle className="text-yellow-600 shrink-0" />
+                                <p className="text-sm font-semibold text-yellow-800">CUELGUE inmediatamente y llame usted mismo a su familiar.</p>
+                            </div>
+                            </div>
+                        </div>
+
+                        {/* Scam 3 */}
+                        <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-purple-400">
+                            <div className="p-8 text-center">
+                            <div className="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Lock className="text-purple-500 w-10 h-10" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">Solicitud de Datos</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
+                                <p>Piden sus claves bancarias, contraseñas, coordenadas o códigos por teléfono.</p>
+                            </div>
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
+                                <AlertTriangle className="text-yellow-600 shrink-0" />
+                                <p className="text-sm font-semibold text-yellow-800">Los bancos NUNCA piden esta información. Es una ESTAFA.</p>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* GEMINI SCAM ANALYZER SECTION */}
+                    <ScamAnalyzer fontClass={fontClass} />
+
+                    {/* EDUCATIONAL VIDEOS SECTION */}
+                    <section className="py-16 px-4 bg-white">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-12">
+                        <div className="bg-pink-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Video className="text-pink-600 w-8 h-8" />
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-3">Videos Educativos: Aprendamos Juntos</h2>
+                        <p className="text-gray-600">Pequeñas guías visuales explicadas paso a paso para reforzar su seguridad.</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {/* Video 1 */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
+                            <div className="relative h-48 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Play className="text-white fill-white ml-1" size={32} />
+                            </div>
+                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">3:45</span>
+                            </div>
+                            <div className="p-6">
+                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-purple-700">Cómo detectar "El Cuento del Tío"</h3>
+                            <p className="text-gray-600 text-sm mb-4">Aprenda a identificar las señales en una llamada telefónica falsa y qué hacer inmediatamente.</p>
+                            <button className="text-purple-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Ver Video Ahora <Play size={14} className="fill-purple-600" />
+                            </button>
+                            </div>
+                        </div>
+
+                        {/* Video 2 */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
+                            <div className="relative h-48 bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Play className="text-white fill-white ml-1" size={32} />
+                            </div>
+                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">2:30</span>
+                            </div>
+                            <div className="p-6">
+                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-green-700">Cajero Automático Seguro</h3>
+                            <p className="text-gray-600 text-sm mb-4">Consejos prácticos para proteger su clave y su dinero al ir al banco o usar un cajero.</p>
+                            <button className="text-green-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Ver Video Ahora <Play size={14} className="fill-green-600" />
+                            </button>
+                            </div>
+                        </div>
+
+                        {/* Video 3 */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
+                            <div className="relative h-48 bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <Play className="text-white fill-white ml-1" size={32} />
+                            </div>
+                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">4:10</span>
+                            </div>
+                            <div className="p-6">
+                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-orange-700">Cuidado con los Links (SMS/WhatsApp)</h3>
+                            <p className="text-gray-600 text-sm mb-4">Explicación sencilla sobre el "Phishing" y por qué nunca debe abrir enlaces desconocidos.</p>
+                            <button className="text-orange-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Ver Video Ahora <Play size={14} className="fill-orange-600" />
+                            </button>
+                            </div>
+                        </div>
+
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* RECUERDE GREEN SECTION */}
+                    <section className="py-12 px-4">
+                    <div className="max-w-4xl mx-auto bg-green-600 rounded-3xl p-8 md:p-12 text-center text-white shadow-xl relative overflow-hidden">
+                        <div className="relative z-10">
+                        <div className="flex justify-center mb-6">
+                            <Heart className="w-16 h-16 text-white animate-pulse" fill="white" />
+                        </div>
+                        <h2 className="text-2xl md:text-4xl font-bold mb-4">Recuerde: Su Seguridad es lo Más Importante</h2>
+                        <p className="text-xl mb-8 opacity-90">No tenga vergüenza de preguntar, verificar o decir que NO.</p>
+                        <div className="inline-block bg-white text-green-700 px-8 py-4 rounded-full font-bold text-lg md:text-xl shadow-lg transform hover:scale-105 transition-transform cursor-default">
+                            Es mejor prevenir que lamentar.
+                        </div>
+                        </div>
+                        {/* Decoration Circles */}
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                        <div className="absolute bottom-0 right-0 w-48 h-48 bg-white opacity-10 rounded-full translate-x-1/3 translate-y-1/3"></div>
+                    </div>
+                    </section>
+
+                    {/* HELP SECTION */}
+                    <section className="py-16 px-4 bg-blue-50/50">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="text-center mb-10">
+                        <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <PhoneCall className="text-green-600 w-8 h-8" />
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-3">¿Necesita Ayuda?</h2>
+                        <p className="text-gray-600">Estos son los números y servicios que puede contactar si necesita ayuda o tiene dudas.</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                        {/* Card 1: Carabineros */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-blue-400 flex items-center gap-6 hover:shadow-md transition-shadow">
+                            <div className="bg-blue-600 p-4 rounded-xl text-white shadow-lg shrink-0">
+                            <Phone size={32} />
+                            </div>
+                            <div>
+                            <h3 className="font-bold text-xl text-gray-800">Carabineros de Chile</h3>
+                            <div className="inline-block bg-blue-600 text-white font-bold text-2xl px-4 py-1 rounded-lg my-2 shadow-sm">
+                                133
+                            </div>
+                            <p className="text-sm text-gray-600">Para denunciar estafas o situaciones sospechosas</p>
+                            </div>
+                        </div>
+
+                        {/* Card 2: SERNAC */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-green-400 flex items-center gap-6 hover:shadow-md transition-shadow">
+                            <div className="bg-green-600 p-4 rounded-xl text-white shadow-lg shrink-0">
+                            <Landmark size={32} />
+                            </div>
+                            <div>
+                            <h3 className="font-bold text-xl text-gray-800">SERNAC</h3>
+                            <div className="inline-block bg-green-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">
+                                800 700 100
+                            </div>
+                            <p className="text-sm text-gray-600">Servicio Nacional del Consumidor para reclamos</p>
+                            </div>
+                        </div>
+
+                        {/* Card 3: SENAMA */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-purple-400 flex items-center gap-6 hover:shadow-md transition-shadow">
+                            <div className="bg-purple-600 p-4 rounded-xl text-white shadow-lg shrink-0">
+                            <Shield size={32} />
+                            </div>
+                            <div>
+                            <h3 className="font-bold text-xl text-gray-800">SENAMA</h3>
+                            <div className="inline-block bg-purple-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">
+                                800 4000 35
+                            </div>
+                            <p className="text-sm text-gray-600">Servicio Nacional del Adulto Mayor</p>
+                            </div>
+                        </div>
+
+                        {/* Card 4: Banco */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-orange-400 flex items-center gap-6 hover:shadow-md transition-shadow">
+                            <div className="bg-orange-600 p-4 rounded-xl text-white shadow-lg shrink-0">
+                            <CreditCard size={32} />
+                            </div>
+                            <div className="flex-1">
+                            <h3 className="font-bold text-xl text-gray-800">Su Banco</h3>
+                            <div className="bg-orange-600 text-white font-bold text-lg md:text-xl px-4 py-2 rounded-lg my-2 shadow-sm text-center">
+                                Número al reverso de su tarjeta
+                            </div>
+                            <p className="text-sm text-gray-600">Para bloquear tarjetas o reportar movimientos extraños</p>
+                            </div>
+                        </div>
+                        </div>
+
+                        {/* Blue Banner Info */}
+                        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center shadow-lg relative overflow-hidden">
+                        <div className="relative z-10">
+                            <div className="flex justify-center mb-4">
+                            <div className="bg-white/20 p-2 rounded-full">
+                                <Info size={28} />
+                            </div>
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2">Importante: Guarde Estos Números</h3>
+                            <p className="mb-6 opacity-90">Anote estos números en un papel y téngalos siempre a mano.</p>
+                            <button className="bg-white text-blue-700 px-6 py-2 rounded-full font-bold shadow hover:bg-gray-100 transition-colors">
+                            Nunca es tarde para pedir ayuda
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* TEAM SECTION */}
+                    <section className="py-16 px-4 bg-gray-50">
+                    <div className="max-w-6xl mx-auto text-center">
+                        <div className="flex justify-center mb-6">
+                        <div className="bg-indigo-100 p-4 rounded-2xl">
+                            <Users className="w-10 h-10 text-indigo-600" />
+                        </div>
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-2">Nuestro Equipo</h2>
+                        <p className="text-gray-600 text-lg mb-12">Estudiantes de Primer Año de Trabajo Social - AIEP<br/>Comprometidos con la protección y bienestar de las personas mayores</p>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-12">
+                        {[
+                            { name: 'Estefanía Díaz', color: 'blue' },
+                            { name: 'José Huanel', color: 'purple' },
+                            { name: 'Juanita Quintero', color: 'pink' },
+                            { name: 'María Jesús Sobarzo', color: 'red' }
+                        ].map((member, idx) => (
+                            <div key={idx} className={`bg-white p-6 rounded-2xl shadow-sm border-2 border-${member.color}-200 hover:-translate-y-2 transition-transform duration-300`}>
+                            <div className={`w-20 h-20 mx-auto bg-${member.color}-500 rounded-full flex items-center justify-center mb-4 text-white shadow-md`}>
+                                <span className="text-3xl">☺</span>
+                            </div>
+                            <h3 className={`font-bold text-lg text-${member.color}-700 mb-1`}>{member.name}</h3>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Estudiante de Trabajo Social</p>
+                            </div>
+                        ))}
+                        </div>
+
+                        <div className="bg-blue-100 border border-blue-200 rounded-2xl p-6 md:p-8 shadow-inner">
+                        <p className="text-blue-900 font-medium text-lg flex items-center justify-center gap-2">
+                            <Heart className="fill-blue-500 text-blue-500 shrink-0" size={24} />
+                            Este proyecto nace del compromiso de futuros trabajadores sociales por crear una sociedad más justa y protectora para nuestros adultos mayores.
+                            <Heart className="fill-blue-500 text-blue-500 shrink-0" size={24} />
+                        </p>
+                        </div>
+                    </div>
+                    </section>
+
+                    {/* FOOTER */}
+                    <footer className="bg-gray-800 text-gray-300 py-8 text-center px-4">
+                    <p>© 2025 Prevención del Maltrato en el Adulto Mayor.</p>
+                    <p className="text-sm mt-2 opacity-60">Proyecto Académico AIEP - Trabajo Social</p>
+                    </footer>
+                </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
