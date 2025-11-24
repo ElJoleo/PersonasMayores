@@ -2,7 +2,8 @@
   "name": "personas-mayores",
   "version": "1.0.0",
   "description": "Proyecto de prevención de estafas",
+  "type": "module", 
   "dependencies": {
-    "@google/genai": "latest"   
+    "@google/genai": "latest"
   }
 }
