@@ -23,19 +23,11 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <script src="secrets.js"></script> 
-
     <div id="root"></div>
 
     <script type="text/babel">
         // --- 1. CONFIGURACIÓN INICIAL ---
         const { useState, useEffect, useRef } = React;
-
-        // --- CAMBIO #2: DEFINICIÓN SEGURA DE LA API KEY ---
-        // Si la variable de "secrets.js" existe (estás en tu PC), usa el valor local.
-        // Si no existe (estás en GitHub/Vercel), usa una cadena vacía ("").
-        const apikey = typeof GEMINI_API_KEY_LOCAL !== 'undefined' ? GEMINI_API_KEY_LOCAL : "";
-        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
 
         // --- 2. ADAPTADOR DE ICONOS (Para que funcionen en HTML) ---
         // Este bloque convierte los nombres de Lucide React a etiquetas HTML <i>
@@ -70,35 +62,37 @@
         const Sparkles = (p) => <Icon name="sparkles" {...p} />;
 
 
-        // --- 3. LÓGICA DE GEMINI API ---
+        // --- 3. LÓGICA DE GEMINI API (Llama al servidor seguro /api/chat) ---
         async function callGeminiAPI(prompt, systemInstruction = "") {
-            if (!apikey) return "⚠️ Error: Falta la Clave API en el código (línea 38).";
-
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apikey}`;
+            // Se asume que el error de clave se maneja en el servidor (api/chat.js)
+            const url = `/api/chat`; 
             
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] }
-            };
-
             try {
                 const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Enviamos solo el mensaje del usuario (prompt) al servidor
+                    body: JSON.stringify({ prompt: prompt }) 
                 });
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                // Si la función Serverless devuelve un error (500), lanzamos una excepción
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    // Retornamos el mensaje de error del servidor
+                    return errorData.text || "Hubo un problema temporal al comunicarse con el asistente. Por favor intente de nuevo más tarde.";
+                }
                 
                 const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Lo siento, no pude entender eso. ¿Podría repetirlo?";
+                // Retornamos la respuesta de texto desde el servidor
+                return data.text || "Lo siento, no pude entender eso. ¿Podría repetirlo?";
             } catch (error) {
-                console.error("Error calling Gemini:", error);
-                return "Hubo un problema temporal. Por favor intente de nuevo más tarde.";
+                console.error("Error al llamar a la función Serverless:", error);
+                // Si falla la conexión de red
+                return "Hubo un problema de conexión. Verifique su red.";
             }
         }
 
-        // --- 4. TUS COMPONENTES (Copiados de tu código original) ---
+        // --- 4. TUS COMPONENTES ---
 
         // Componente del Analizador de Estafas
         const ScamAnalyzer = ({ fontClass }) => {
@@ -111,11 +105,10 @@
                 setLoading(true);
                 setResult(null);
 
-                const systemPrompt = "Eres un experto en ciberseguridad amable y paciente, especializado en ayudar a adultos mayores. Tu tarea es analizar textos sospechosos (SMS, correos, WhatsApp) que reciben los usuarios. Determina si es probable que sea una estafa. Tu respuesta debe tener 3 partes claras: 1) Veredicto (Seguro, Sospechoso o Peligroso), 2) Explicación simple (sin tecnicismos), 3) Consejo de acción inmediato. Sé empático y claro.";
-                
+                // El systemPrompt ahora está codificado en api/chat.js
                 const userPrompt = `Analiza este mensaje que recibí: "${inputText}"`;
                 
-                const response = await callGeminiAPI(userPrompt, systemPrompt);
+                const response = await callGeminiAPI(userPrompt); 
                 setResult(response);
                 setLoading(false);
             };
@@ -193,12 +186,11 @@
                 setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
                 setIsTyping(true);
 
-                const systemPrompt = "Eres 'Protector Mayor', un asistente virtual chileno, amable y muy paciente diseñado para ayudar a adultos mayores. Responde preguntas sobre cómo evitar estafas, usar el celular, o seguridad bancaria. Usa un lenguaje muy sencillo, cálido y respetuoso (trata de 'usted'). Sé conciso. Nunca pidas datos personales reales. Si preguntan algo peligroso, advierte con firmeza pero cariño.";
-                
+                // Aunque el Serverless Function tiene un systemPrompt, enviamos el contexto para la conversación
                 const recentContext = messages.slice(-4).map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.text}`).join('\n');
                 const fullPrompt = `${recentContext}\nUsuario: ${userMsg}\nAsistente:`;
 
-                const reply = await callGeminiAPI(fullPrompt, systemPrompt);
+                const reply = await callGeminiAPI(fullPrompt); 
                 
                 setMessages(prev => [...prev, { role: 'system', text: reply }]);
                 setIsTyping(false);
@@ -614,7 +606,6 @@
                             </button>
                             </div>
                         </div>
-
                         </div>
                     </div>
                     </section>
