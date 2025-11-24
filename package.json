@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Proyecto de prevención de estafas",
   "dependencies": {
-    "@google/genai": "^0.1.0"
+    "@google/genai": "latest"   
   }
 }
