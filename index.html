@@ -17,22 +17,45 @@
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
         .rotate-3 { transform: rotate(3deg); }
+        .scroll-smooth { scroll-behavior: smooth; }
+        
+        /* Clases para Accesibilidad */
+        .high-contrast {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+        }
+        .high-contrast * {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+            border-color: #FFFF00 !important;
+        }
+        .high-contrast img, .high-contrast video, .high-contrast .no-contrast-change {
+            filter: grayscale(100%) contrast(150%);
+        }
+        .high-contrast .quiz-card {
+            border: 2px solid #FFFF00;
+        }
+        
+        .big-cursor {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewport='0 0 48 48' style='fill:black;stroke:white;stroke-width:2px;'><path d='M0 0 L24 24 L14 26 L22 42 L16 45 L8 29 L0 38 Z' /></svg>"), auto !important;
+        }
+        .big-cursor a, .big-cursor button {
+            cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewport='0 0 48 48' style='fill:red;stroke:white;stroke-width:2px;'><path d='M0 0 L24 24 L14 26 L22 42 L16 45 L8 29 L0 38 Z' /></svg>"), pointer !important;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-50 text-gray-800 scroll-smooth">
 
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- 1. CONFIGURACIÓN INICIAL ---
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // --- 2. ADAPTADOR DE ICONOS (Para que funcionen en HTML) ---
+        // --- ADAPTADOR DE ICONOS ---
         const Icon = ({ name, size = 24, className = "" }) => {
             return <i data-lucide={name} width={size} height={size} className={className}></i>;
         };
 
-        // Definimos los componentes de iconos necesarios
         const Shield = (p) => <Icon name="shield" {...p} />;
         const Phone = (p) => <Icon name="phone" {...p} />;
         const Users = (p) => <Icon name="users" {...p} />;
@@ -48,11 +71,255 @@
         const Landmark = (p) => <Icon name="landmark" {...p} />;
         const Video = (p) => <Icon name="video" {...p} />;
         const Play = (p) => <Icon name="play" {...p} />;
+        const Accessibility = (p) => <Icon name="accessibility" {...p} />;
+        const Eye = (p) => <Icon name="eye" {...p} />;
+        const Volume2 = (p) => <Icon name="volume-2" {...p} />;
+        const MousePointer2 = (p) => <Icon name="mouse-pointer-2" {...p} />;
+        const HelpCircle = (p) => <Icon name="help-circle" {...p} />;
+        const XCircle = (p) => <Icon name="x-circle" {...p} />;
+        const Trophy = (p) => <Icon name="trophy" {...p} />;
 
-        // --- 3. COMPONENTE PRINCIPAL (APP) ---
+        // --- COMPONENTE DE ACCESIBILIDAD ---
+        const AccessibilityMenu = ({ onHighContrast, onBigCursor, onSpeechToggle, isSpeechActive }) => {
+            const [isOpen, setIsOpen] = useState(false);
+
+            return (
+                <div className="fixed left-4 bottom-4 z-50 flex flex-col items-start gap-2 no-contrast-change">
+                    {isOpen && (
+                        <div className="bg-white p-4 rounded-2xl shadow-2xl border-2 border-blue-600 mb-2 w-64 animate-fade-in flex flex-col gap-3">
+                            <h3 className="font-bold text-blue-900 border-b pb-2 mb-1">Herramientas de Inclusión</h3>
+                            
+                            <button onClick={onSpeechToggle} className={`flex items-center gap-3 p-3 rounded-xl transition-all font-bold text-left ${isSpeechActive ? 'bg-green-100 text-green-800 border-2 border-green-500' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'}`}>
+                                <Volume2 />
+                                <div>
+                                    <span className="block text-sm">Lector de Voz</span>
+                                    <span className="text-xs font-normal opacity-80">{isSpeechActive ? 'Activado (Toque texto)' : 'Desactivado'}</span>
+                                </div>
+                            </button>
+
+                            <button onClick={onHighContrast} className="flex items-center gap-3 p-3 rounded-xl bg-black text-yellow-300 hover:bg-gray-900 border-2 border-yellow-500 transition-all font-bold text-left">
+                                <Eye />
+                                <div>
+                                    <span className="block text-sm">Alto Contraste</span>
+                                    <span className="text-xs font-normal opacity-80">Visión Reducida</span>
+                                </div>
+                            </button>
+
+                            <button onClick={onBigCursor} className="flex items-center gap-3 p-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 transition-all font-bold text-left">
+                                <MousePointer2 />
+                                <div>
+                                    <span className="block text-sm">Cursor Gigante</span>
+                                    <span className="text-xs font-normal opacity-80">Ayuda Motora</span>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="bg-blue-700 hover:bg-blue-800 text-white p-4 rounded-full shadow-lg border-4 border-white transition-transform hover:scale-110 flex items-center justify-center"
+                        title="Menú de Accesibilidad"
+                    >
+                        <Accessibility size={32} />
+                    </button>
+                </div>
+            );
+        };
+
+        // --- COMPONENTE QUIZ (TRIVIA) ---
+        const QuizSection = () => {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [showResult, setShowResult] = useState(false); // Muestra feedback intermedio
+            const [isCorrect, setIsCorrect] = useState(false);
+            const [showFinalScore, setShowFinalScore] = useState(false);
+
+            const questions = [
+                {
+                    question: "Un supuesto ejecutivo del banco le llama por teléfono y le pide sus claves para 'bloquear' una tarjeta por seguridad. ¿Se las entrega?",
+                    options: [
+                        { text: "Sí, para que no me roben.", correct: false },
+                        { text: "No, nunca. El banco jamás pide claves por teléfono.", correct: true }
+                    ],
+                    explanation: "¡Correcto! Los bancos JAMÁS piden claves ni códigos por teléfono. Si alguien se las pide, es una estafa."
+                },
+                {
+                    question: "Le llega un mensaje de texto (SMS) diciendo que tiene un bono del gobierno pendiente y debe hacer clic en un enlace azul. ¿Qué hace?",
+                    options: [
+                        { text: "Entro al enlace para cobrar.", correct: false },
+                        { text: "Borro el mensaje. Es peligroso.", correct: true }
+                    ],
+                    explanation: "¡Muy bien! Nunca abra enlaces desconocidos (links azules). Suelen descargar virus o robar sus datos."
+                },
+                {
+                    question: "Le llaman llorando diciendo: '¡Abuelita, tuve un accidente, necesito plata!'. ¿Qué es lo primero que hace?",
+                    options: [
+                        { text: "Corto la llamada y llamo yo mismo/a a mi nieto.", correct: true },
+                        { text: "Pregunto dónde depósito el dinero.", correct: false }
+                    ],
+                    explanation: "¡Exacto! Esa es la estafa del 'Cuento del Tío'. Siempre corte y verifique llamando usted a su familiar."
+                }
+            ];
+
+            const handleAnswer = (isAnswerCorrect) => {
+                setIsCorrect(isAnswerCorrect);
+                setShowResult(true);
+            };
+
+            const nextQuestion = () => {
+                setShowResult(false);
+                if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
+                } else {
+                    setShowFinalScore(true);
+                }
+            };
+
+            const restartQuiz = () => {
+                setCurrentQuestion(0);
+                setShowFinalScore(false);
+                setShowResult(false);
+            };
+
+            if (showFinalScore) {
+                return (
+                    <div className="bg-white rounded-3xl p-8 shadow-xl text-center border-4 border-yellow-400 max-w-2xl mx-auto quiz-card animate-fade-in">
+                        <div className="flex justify-center mb-6">
+                            <Trophy className="text-yellow-500 w-24 h-24 animate-bounce" />
+                        </div>
+                        <h3 className="text-3xl font-bold text-gray-800 mb-4">¡Felicitaciones!</h3>
+                        <p className="text-xl text-gray-600 mb-8">Ha completado el entrenamiento de seguridad. Ahora está mucho más preparado/a para enfrentar estas situaciones.</p>
+                        <button onClick={restartQuiz} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transition-transform hover:scale-105">
+                            Volver a Jugar
+                        </button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200 max-w-3xl mx-auto quiz-card">
+                    <div className="bg-purple-700 p-6 text-white flex justify-between items-center">
+                        <h3 className="font-bold text-xl flex items-center gap-2">
+                            <HelpCircle /> Pregunta {currentQuestion + 1} de {questions.length}
+                        </h3>
+                    </div>
+                    
+                    <div className="p-8">
+                        {!showResult ? (
+                            <div className="animate-fade-in">
+                                <p className="text-2xl font-medium text-gray-800 mb-8 leading-relaxed">
+                                    {questions[currentQuestion].question}
+                                </p>
+                                <div className="grid gap-4">
+                                    {questions[currentQuestion].options.map((option, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => handleAnswer(option.correct)}
+                                            className="w-full text-left p-6 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-xl font-semibold flex items-center gap-4 group"
+                                        >
+                                            <div className="w-8 h-8 rounded-full border-2 border-gray-400 group-hover:border-purple-500 flex items-center justify-center shrink-0">
+                                                <div className="w-4 h-4 rounded-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            </div>
+                                            {option.text}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={`text-center p-4 rounded-2xl animate-fade-in ${isCorrect ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
+                                <div className="flex justify-center mb-4">
+                                    {isCorrect ? (
+                                        <CheckCircle2 className="w-20 h-20 text-green-500" />
+                                    ) : (
+                                        <XCircle className="w-20 h-20 text-red-500" />
+                                    )}
+                                </div>
+                                <h4 className={`text-2xl font-bold mb-2 ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                    {isCorrect ? '¡Respuesta Correcta!' : '¡Cuidado!'}
+                                </h4>
+                                <p className="text-lg text-gray-700 mb-6">
+                                    {isCorrect ? questions[currentQuestion].explanation : "Esa acción podría ponerle en riesgo. " + questions[currentQuestion].explanation}
+                                </p>
+                                <button 
+                                    onClick={nextQuestion}
+                                    className={`py-3 px-10 rounded-full text-white font-bold text-xl shadow-lg transition-transform hover:scale-105 ${isCorrect ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                                >
+                                    Siguiente Pregunta ➜
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENTE PRINCIPAL (APP) ---
         const App = () => {
             const [fontSizeLevel, setFontSizeLevel] = useState(1);
+            const [highContrast, setHighContrast] = useState(false);
+            const [bigCursor, setBigCursor] = useState(false);
+            const [speechMode, setSpeechMode] = useState(false);
             
+            // Referencia para el scroll
+            const quizRef = useRef(null);
+
+            const scrollToQuiz = () => {
+                if (quizRef.current) {
+                    quizRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            };
+            
+            // Efecto para Alto Contraste
+            useEffect(() => {
+                if (highContrast) {
+                    document.body.classList.add('high-contrast');
+                } else {
+                    document.body.classList.remove('high-contrast');
+                }
+            }, [highContrast]);
+
+            // Efecto para Cursor Gigante
+            useEffect(() => {
+                if (bigCursor) {
+                    document.body.classList.add('big-cursor');
+                } else {
+                    document.body.classList.remove('big-cursor');
+                }
+            }, [bigCursor]);
+
+            // Manejador de Lectura de Voz
+            useEffect(() => {
+                const handleSpeechClick = (e) => {
+                    if (!speechMode) return;
+                    window.speechSynthesis.cancel();
+                    let target = e.target;
+                    while (target && !['P', 'H1', 'H2', 'H3', 'LI', 'BUTTON', 'A', 'SPAN'].includes(target.tagName)) {
+                        target = target.parentElement;
+                        if (target === document.body) return;
+                    }
+                    if (target && target.innerText) {
+                        const utterance = new SpeechSynthesisUtterance(target.innerText);
+                        utterance.lang = 'es-ES';
+                        utterance.rate = 0.9;
+                        target.style.backgroundColor = 'yellow';
+                        target.style.color = 'black';
+                        utterance.onend = () => {
+                            target.style.backgroundColor = '';
+                            target.style.color = '';
+                        };
+                        window.speechSynthesis.speak(utterance);
+                    }
+                };
+                if (speechMode) {
+                    document.addEventListener('click', handleSpeechClick);
+                    const startMsg = new SpeechSynthesisUtterance("Modo lectura activado.");
+                    startMsg.lang = 'es-ES';
+                    window.speechSynthesis.speak(startMsg);
+                } else {
+                    document.removeEventListener('click', handleSpeechClick);
+                    window.speechSynthesis.cancel();
+                }
+                return () => { document.removeEventListener('click', handleSpeechClick); };
+            }, [speechMode]);
+
             const getFontSizeClass = () => {
                 switch(fontSizeLevel) {
                     case 0: return 'text-base';
@@ -61,49 +328,31 @@
                     default: return 'text-lg';
                 }
             };
-
             const fontClass = getFontSizeClass();
 
-            // Renderizar iconos
-            useEffect(() => {
-                lucide.createIcons();
-            }, [fontSizeLevel]);
-
+            useEffect(() => { lucide.createIcons(); });
 
             return (
                 <div className={`min-h-screen bg-gray-50 font-sans text-gray-800 ${fontClass} transition-all duration-300`}>
                 
-                {/* BARRA DE NAVEGACIÓN */}
-                <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-40 py-3 px-4 md:px-8">
+                <AccessibilityMenu 
+                    onHighContrast={() => setHighContrast(!highContrast)}
+                    onBigCursor={() => setBigCursor(!bigCursor)}
+                    onSpeechToggle={() => setSpeechMode(!speechMode)}
+                    isSpeechActive={speechMode}
+                />
+
+                <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-40 py-3 px-4 md:px-8 no-contrast-change">
                     <div className="max-w-6xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Shield className="text-purple-600 fill-purple-100" size={32} />
                         <span className="font-bold text-xl md:text-2xl text-purple-800">Protección Mayor</span>
                     </div>
-
                     <div className="flex items-center gap-4">
                         <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-inner border border-gray-200">
-                        <button 
-                            onClick={() => setFontSizeLevel(0)}
-                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 0 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-                            title="Tamaño Normal"
-                        >
-                            <span className="text-sm">A</span>
-                        </button>
-                        <button 
-                            onClick={() => setFontSizeLevel(1)}
-                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 1 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-                            title="Tamaño Grande"
-                        >
-                            <span className="text-lg">A</span>
-                        </button>
-                        <button 
-                            onClick={() => setFontSizeLevel(2)}
-                            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 2 ? 'bg-purple-600 text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
-                            title="Tamaño Muy Grande"
-                        >
-                            <span className="text-2xl">A</span>
-                        </button>
+                        <button onClick={() => setFontSizeLevel(0)} className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 0 ? 'bg-purple-600 text-white font-bold' : 'text-gray-600 hover:bg-gray-200'}`}>A</button>
+                        <button onClick={() => setFontSizeLevel(1)} className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 1 ? 'bg-purple-600 text-white font-bold' : 'text-gray-600 hover:bg-gray-200'}`}>A</button>
+                        <button onClick={() => setFontSizeLevel(2)} className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 2 ? 'bg-purple-600 text-white font-bold' : 'text-gray-600 hover:bg-gray-200'}`}>A</button>
                         </div>
                     </div>
                     </div>
@@ -127,16 +376,23 @@
                         <p className="text-lg md:text-xl mb-6 font-medium">
                             Te entregamos herramientas claras, simples y útiles para que puedas reconocer situaciones de riesgo y protegerte de estafas comunes.
                         </p>
-                        <div className="flex flex-wrap justify-center gap-3">
-                            <span className="bg-blue-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
-                            <CheckCircle2 size={20} /> Información Clara
-                            </span>
-                            <span className="bg-purple-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
-                            <CheckCircle2 size={20} /> Fácil de Entender
-                            </span>
-                            <span className="bg-pink-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
-                            <CheckCircle2 size={20} /> Protección Real
-                            </span>
+                        <div className="flex flex-col md:flex-row justify-center items-center gap-4">
+                            <div className="flex flex-wrap justify-center gap-3">
+                                <span className="bg-blue-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                                <CheckCircle2 size={20} /> Información Clara
+                                </span>
+                                <span className="bg-purple-500/80 px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
+                                <CheckCircle2 size={20} /> Fácil de Entender
+                                </span>
+                            </div>
+                            
+                            {/* BOTÓN PARA BAJAR AL QUIZ */}
+                            <button 
+                                onClick={scrollToQuiz}
+                                className="bg-yellow-400 text-purple-900 hover:bg-yellow-300 px-8 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition-all mt-4 md:mt-0 border-4 border-transparent hover:border-white"
+                            >
+                                <Trophy size={24} /> Poner a Prueba mis Conocimientos
+                            </button>
                         </div>
                         </div>
                     </div>
@@ -163,73 +419,29 @@
                     <section className="py-16 px-4">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-12">
-                        <div className="bg-yellow-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
-                            <Shield className="text-yellow-600 w-8 h-8" />
-                        </div>
                         <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-3">Las 3 Reglas de Oro</h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            Memorice estas tres reglas simples. Le ayudarán a protegerse en cualquier situación.
-                        </p>
+                        <p className="text-gray-600 max-w-2xl mx-auto">Memorice estas tres reglas simples. Le ayudarán a protegerse en cualquier situación.</p>
                         </div>
-
                         <div className="grid md:grid-cols-3 gap-6">
-                        {/* Rule 1 */}
                         <div className="bg-white rounded-3xl border-4 border-blue-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                             <div className="p-6 text-center">
-                            <div className="bg-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
-                                <Clock />
-                            </div>
-                            <div className="absolute top-6 right-6 bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
+                            <div className="bg-blue-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md"><Clock /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Nunca Actúe con Urgencia</h3>
-                            
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
-                                <p className="text-gray-700">Si alguien le presiona para tomar una decisión rápida con dinero, es una señal de <span className="font-bold text-red-600">ALERTA</span>.</p>
-                            </div>
-                            
-                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 flex items-start gap-3 text-left">
-                                <CheckCircle2 className="text-blue-600 shrink-0 mt-1" />
-                                <p className="text-blue-800 font-medium">Tómese su tiempo. Las cosas importantes pueden esperar.</p>
-                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left"><p className="text-gray-700">Si alguien le presiona para tomar una decisión rápida con dinero, es una señal de <span className="font-bold text-red-600">ALERTA</span>.</p></div>
                             </div>
                         </div>
-
-                        {/* Rule 2 */}
                         <div className="bg-white rounded-3xl border-4 border-purple-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                             <div className="p-6 text-center relative">
-                            <div className="bg-purple-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
-                                <Users />
-                            </div>
-                            <div className="absolute top-0 right-0 m-6 bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
+                            <div className="bg-purple-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md"><Users /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Consulte con Alguien de Confianza</h3>
-                            
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
-                                <p className="text-gray-700">Antes de entregar dinero, datos personales o firmar algo, hable con un familiar o amigo cercano.</p>
-                            </div>
-                            
-                            <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 flex items-start gap-3 text-left">
-                                <CheckCircle2 className="text-purple-600 shrink-0 mt-1" />
-                                <p className="text-purple-800 font-medium">Una segunda opinión puede salvarle de una estafa.</p>
-                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left"><p className="text-gray-700">Antes de entregar dinero, datos personales o firmar algo, hable con un familiar o amigo cercano.</p></div>
                             </div>
                         </div>
-
-                        {/* Rule 3 */}
                         <div className="bg-white rounded-3xl border-4 border-orange-200 overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                             <div className="p-6 text-center relative">
-                            <div className="bg-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md">
-                                <Shield />
-                            </div>
-                            <div className="absolute top-0 right-0 m-6 bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
+                            <div className="bg-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold shadow-md"><Shield /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Proteja Sus Datos Personales</h3>
-                            
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left">
-                                <p className="text-gray-700">Sus claves, contraseñas, RUT y datos bancarios son <span className="font-bold">SOLO SUYOS</span>. Nadie legítimo se los pedirá.</p>
-                            </div>
-                            
-                            <div className="bg-orange-50 rounded-xl p-4 border border-orange-100 flex items-start gap-3 text-left">
-                                <AlertTriangle className="text-yellow-600 shrink-0" />
-                                <p className="text-orange-800 font-medium">Si alguien los solicita, cuelgue o ignore el mensaje.</p>
-                            </div>
+                            <div className="bg-gray-50 rounded-xl p-4 mb-4 border border-gray-100 text-left"><p className="text-gray-700">Sus claves, contraseñas, RUT y datos bancarios son <span className="font-bold">SOLO SUYOS</span>. Nadie legítimo se los pedirá.</p></div>
                             </div>
                         </div>
                         </div>
@@ -243,56 +455,26 @@
                         <h2 className="text-3xl md:text-4xl font-bold text-red-600 mb-3">Estafas Más Comunes</h2>
                         <p className="text-gray-600">Estas son las estafas que más afectan a las personas mayores. ¡Conócelas para protegerte!</p>
                         </div>
-
                         <div className="grid md:grid-cols-3 gap-8">
-                        {/* Scam 1 */}
                         <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-orange-400">
                             <div className="p-8 text-center">
-                            <div className="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Gift className="text-orange-500 w-10 h-10" />
-                            </div>
+                            <div className="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Gift className="text-orange-500 w-10 h-10" /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Premios Falsos</h3>
-                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
-                                <p>Le dicen que ganó un premio, sorteo o lotería, pero debe pagar primero para recibirlo.</p>
-                            </div>
-                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
-                                <AlertTriangle className="text-yellow-600 shrink-0" />
-                                <p className="text-sm font-semibold text-yellow-800">Si ganó algo real, NUNCA le pedirán dinero para entregárselo.</p>
-                            </div>
+                            <p className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">Le dicen que ganó un premio, sorteo o lotería, pero debe pagar primero para recibirlo.</p>
                             </div>
                         </div>
-
-                        {/* Scam 2 */}
                         <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-red-400">
                             <div className="p-8 text-center">
-                            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Phone className="text-red-500 w-10 h-10" />
-                            </div>
+                            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Phone className="text-red-500 w-10 h-10" /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Secuestros Simulados</h3>
-                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
-                                <p>Llaman diciendo que tienen secuestrado a un familiar y exigen dinero urgente.</p>
-                            </div>
-                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
-                                <AlertTriangle className="text-yellow-600 shrink-0" />
-                                <p className="text-sm font-semibold text-yellow-800">CUELGUE inmediatamente y llame usted mismo a su familiar.</p>
-                            </div>
+                            <p className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">Llaman diciendo que tienen secuestrado a un familiar y exigen dinero urgente.</p>
                             </div>
                         </div>
-
-                        {/* Scam 3 */}
                         <div className="bg-white rounded-2xl shadow-md overflow-hidden border-l-8 border-purple-400">
                             <div className="p-8 text-center">
-                            <div className="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Lock className="text-purple-500 w-10 h-10" />
-                            </div>
+                            <div className="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="text-purple-500 w-10 h-10" /></div>
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Solicitud de Datos</h3>
-                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">
-                                <p>Piden sus claves bancarias, contraseñas, coordenadas o códigos por teléfono.</p>
-                            </div>
-                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-left flex items-start gap-3">
-                                <AlertTriangle className="text-yellow-600 shrink-0" />
-                                <p className="text-sm font-semibold text-yellow-800">Los bancos NUNCA piden esta información. Es una ESTAFA.</p>
-                            </div>
+                            <p className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 text-left">Piden sus claves bancarias, contraseñas, coordenadas o códigos por teléfono.</p>
                             </div>
                         </div>
                         </div>
@@ -308,65 +490,26 @@
                             <Video className="text-pink-600 w-8 h-8" />
                         </div>
                         <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-3">Videos Educativos: Aprendamos Juntos</h2>
-                        <p className="text-gray-600">Pequeñas guías visuales explicadas paso a paso para reforzar su seguridad.</p>
                         </div>
-
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        
-                        {/* Video 1: Cuento del tío */}
                         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
                             <div className="relative bg-black h-56 flex items-center justify-center">
-                                <video 
-                                    controls 
-                                    className="w-full h-full object-contain"
-                                    preload="metadata"
-                                >
-                                    <source src="videos/cuento-tio.mp4" type="video/mp4" />
-                                    Su navegador no soporta la reproducción de video.
-                                </video>
+                                <video controls className="w-full h-full object-contain" preload="metadata"><source src="videos/cuento-tio.mp4" type="video/mp4" />Su navegador no soporta la reproducción de video.</video>
                             </div>
-                            <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cómo detectar "El Cuento del Tío"</h3>
-                            <p className="text-gray-600 text-sm mb-4">Aprenda a identificar las señales en una llamada telefónica falsa y qué hacer inmediatamente.</p>
-                            </div>
+                            <div className="p-6"><h3 className="font-bold text-xl text-gray-800 mb-2">Cómo detectar "El Cuento del Tío"</h3></div>
                         </div>
-
-                        {/* Video 2: Cajero Automático */}
                         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
                             <div className="relative bg-black h-56 flex items-center justify-center">
-                                <video 
-                                    controls 
-                                    className="w-full h-full object-contain"
-                                    preload="metadata"
-                                >
-                                    <source src="videos/cajero-seguro.mp4" type="video/mp4" />
-                                    Su navegador no soporta la reproducción de video.
-                                </video>
+                                <video controls className="w-full h-full object-contain" preload="metadata"><source src="videos/cajero-seguro.mp4" type="video/mp4" />Su navegador no soporta la reproducción de video.</video>
                             </div>
-                            <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cajero Automático Seguro</h3>
-                            <p className="text-gray-600 text-sm mb-4">Consejos prácticos para proteger su clave y su dinero al ir al banco o usar un cajero.</p>
-                            </div>
+                            <div className="p-6"><h3 className="font-bold text-xl text-gray-800 mb-2">Cajero Automático Seguro</h3></div>
                         </div>
-
-                        {/* Video 3: Links / Phishing */}
                         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
                              <div className="relative bg-black h-56 flex items-center justify-center">
-                                <video 
-                                    controls 
-                                    className="w-full h-full object-contain"
-                                    preload="metadata"
-                                >
-                                    <source src="videos/phishing-links.mp4" type="video/mp4" />
-                                    Su navegador no soporta la reproducción de video.
-                                </video>
+                                <video controls className="w-full h-full object-contain" preload="metadata"><source src="videos/phishing-links.mp4" type="video/mp4" />Su navegador no soporta la reproducción de video.</video>
                             </div>
-                            <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cuidado con los Links</h3>
-                            <p className="text-gray-600 text-sm mb-4">Explicación sencilla sobre el "Phishing" y por qué nunca debe abrir enlaces desconocidos en SMS o WhatsApp.</p>
-                            </div>
+                            <div className="p-6"><h3 className="font-bold text-xl text-gray-800 mb-2">Cuidado con los Links</h3></div>
                         </div>
-
                         </div>
                     </div>
                     </section>
@@ -375,16 +518,10 @@
                     <section className="py-12 px-4">
                     <div className="max-w-4xl mx-auto bg-green-600 rounded-3xl p-8 md:p-12 text-center text-white shadow-xl relative overflow-hidden">
                         <div className="relative z-10">
-                        <div className="flex justify-center mb-6">
-                            <Heart className="w-16 h-16 text-white animate-pulse" fill="white" />
-                        </div>
+                        <div className="flex justify-center mb-6"><Heart className="w-16 h-16 text-white animate-pulse" fill="white" /></div>
                         <h2 className="text-2xl md:text-4xl font-bold mb-4">Recuerde: Su Seguridad es lo Más Importante</h2>
-                        <p className="text-xl mb-8 opacity-90">No tenga vergüenza de preguntar, verificar o decir que NO.</p>
-                        <div className="inline-block bg-white text-green-700 px-8 py-4 rounded-full font-bold text-lg md:text-xl shadow-lg transform hover:scale-105 transition-transform cursor-default">
-                            Es mejor prevenir que lamentar.
+                        <div className="inline-block bg-white text-green-700 px-8 py-4 rounded-full font-bold text-lg md:text-xl shadow-lg cursor-default">Es mejor prevenir que lamentar.</div>
                         </div>
-                        </div>
-                        {/* Decoration Circles */}
                         <div className="absolute top-0 left-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
                         <div className="absolute bottom-0 right-0 w-48 h-48 bg-white opacity-10 rounded-full translate-x-1/3 translate-y-1/3"></div>
                     </div>
@@ -394,100 +531,48 @@
                     <section className="py-16 px-4 bg-blue-50/50">
                     <div className="max-w-5xl mx-auto">
                         <div className="text-center mb-10">
-                        <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <PhoneCall className="text-green-600 w-8 h-8" />
-                        </div>
                         <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-3">¿Necesita Ayuda?</h2>
                         <p className="text-gray-600">Estos son los números y servicios que puede contactar si necesita ayuda o tiene dudas.</p>
                         </div>
-
                         <div className="grid md:grid-cols-2 gap-6">
-                        {/* Card 1: Carabineros */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-blue-400 flex items-center gap-6 hover:shadow-md transition-shadow">
-                            <div className="bg-blue-600 p-4 rounded-xl text-white shadow-lg shrink-0">
-                            <Phone size={32} />
-                            </div>
-                            <div>
-                            <h3 className="font-bold text-xl text-gray-800">Carabineros de Chile</h3>
-                            <div className="inline-block bg-blue-600 text-white font-bold text-2xl px-4 py-1 rounded-lg my-2 shadow-sm">
-                                133
-                            </div>
-                            <p className="text-sm text-gray-600">Para denunciar estafas o situaciones sospechosas</p>
-                            </div>
+                            <div className="bg-blue-600 p-4 rounded-xl text-white shadow-lg shrink-0"><Phone size={32} /></div>
+                            <div><h3 className="font-bold text-xl text-gray-800">Carabineros de Chile</h3><div className="inline-block bg-blue-600 text-white font-bold text-2xl px-4 py-1 rounded-lg my-2 shadow-sm">133</div></div>
                         </div>
-
-                        {/* Card 2: SERNAC */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-green-400 flex items-center gap-6 hover:shadow-md transition-shadow">
-                            <div className="bg-green-600 p-4 rounded-xl text-white shadow-lg shrink-0">
-                            <Landmark size={32} />
-                            </div>
-                            <div>
-                            <h3 className="font-bold text-xl text-gray-800">SERNAC</h3>
-                            <div className="inline-block bg-green-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">
-                                800 700 100
-                            </div>
-                            <p className="text-sm text-gray-600">Servicio Nacional del Consumidor para reclamos</p>
-                            </div>
+                            <div className="bg-green-600 p-4 rounded-xl text-white shadow-lg shrink-0"><Landmark size={32} /></div>
+                            <div><h3 className="font-bold text-xl text-gray-800">SERNAC</h3><div className="inline-block bg-green-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">800 700 100</div></div>
                         </div>
-
-                        {/* Card 3: SENAMA */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-purple-400 flex items-center gap-6 hover:shadow-md transition-shadow">
-                            <div className="bg-purple-600 p-4 rounded-xl text-white shadow-lg shrink-0">
-                            <Shield size={32} />
-                            </div>
-                            <div>
-                            <h3 className="font-bold text-xl text-gray-800">SENAMA</h3>
-                            <div className="inline-block bg-purple-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">
-                                800 4000 35
-                            </div>
-                            <p className="text-sm text-gray-600">Servicio Nacional del Adulto Mayor</p>
-                            </div>
+                            <div className="bg-purple-600 p-4 rounded-xl text-white shadow-lg shrink-0"><Shield size={32} /></div>
+                            <div><h3 className="font-bold text-xl text-gray-800">SENAMA</h3><div className="inline-block bg-purple-600 text-white font-bold text-xl px-4 py-1 rounded-lg my-2 shadow-sm">800 4000 35</div></div>
                         </div>
-
-                        {/* Card 4: Banco */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-orange-400 flex items-center gap-6 hover:shadow-md transition-shadow">
-                            <div className="bg-orange-600 p-4 rounded-xl text-white shadow-lg shrink-0">
-                            <CreditCard size={32} />
-                            </div>
-                            <div className="flex-1">
-                            <h3 className="font-bold text-xl text-gray-800">Su Banco</h3>
-                            <div className="bg-orange-600 text-white font-bold text-lg md:text-xl px-4 py-2 rounded-lg my-2 shadow-sm text-center">
-                                Número al reverso de su tarjeta
-                            </div>
-                            <p className="text-sm text-gray-600">Para bloquear tarjetas o reportar movimientos extraños</p>
-                            </div>
-                        </div>
-                        </div>
-
-                        {/* Blue Banner Info */}
-                        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center shadow-lg relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="flex justify-center mb-4">
-                            <div className="bg-white/20 p-2 rounded-full">
-                                <Info size={28} />
-                            </div>
-                            </div>
-                            <h3 className="text-2xl font-bold mb-2">Importante: Guarde Estos Números</h3>
-                            <p className="mb-6 opacity-90">Anote estos números en un papel y téngalos siempre a mano.</p>
-                            <button className="bg-white text-blue-700 px-6 py-2 rounded-full font-bold shadow hover:bg-gray-100 transition-colors">
-                            Nunca es tarde para pedir ayuda
-                            </button>
+                            <div className="bg-orange-600 p-4 rounded-xl text-white shadow-lg shrink-0"><CreditCard size={32} /></div>
+                            <div className="flex-1"><h3 className="font-bold text-xl text-gray-800">Su Banco</h3><div className="bg-orange-600 text-white font-bold text-lg md:text-xl px-4 py-2 rounded-lg my-2 shadow-sm text-center">Número al reverso de su tarjeta</div></div>
                         </div>
                         </div>
                     </div>
                     </section>
 
+                    {/* QUIZ SECTION (NUEVA SECCIÓN) */}
+                    <section ref={quizRef} className="py-16 px-4 bg-purple-50">
+                        <div className="max-w-4xl mx-auto text-center mb-10">
+                            <div className="inline-block bg-yellow-400 p-4 rounded-full shadow-lg mb-6 animate-bounce">
+                                <Trophy size={48} className="text-purple-900" />
+                            </div>
+                            <h2 className="text-3xl md:text-5xl font-bold text-purple-900 mb-4">¿Cuánto Aprendió Hoy?</h2>
+                            <p className="text-xl text-gray-700">Responda estas 3 situaciones para ver si está preparado para evitar estafas.</p>
+                        </div>
+                        <QuizSection />
+                    </section>
+
                     {/* TEAM SECTION */}
                     <section className="py-16 px-4 bg-gray-50">
                     <div className="max-w-6xl mx-auto text-center">
-                        <div className="flex justify-center mb-6">
-                        <div className="bg-indigo-100 p-4 rounded-2xl">
-                            <Users className="w-10 h-10 text-indigo-600" />
-                        </div>
-                        </div>
+                        <div className="flex justify-center mb-6"><div className="bg-indigo-100 p-4 rounded-2xl"><Users className="w-10 h-10 text-indigo-600" /></div></div>
                         <h2 className="text-3xl md:text-4xl font-bold text-purple-800 mb-2">Nuestro Equipo</h2>
-                        <p className="text-gray-600 text-lg mb-12">Estudiantes de Primer Año de Trabajo Social - AIEP<br/>Comprometidos con la protección y bienestar de las personas mayores</p>
-
+                        <p className="text-gray-600 text-lg mb-12">Estudiantes de Primer Año de Trabajo Social - AIEP</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-12">
                         {[
                             { name: 'Estefanía Díaz', color: 'blue' },
@@ -496,21 +581,10 @@
                             { name: 'María Jesús Sobarzo', color: 'red' }
                         ].map((member, idx) => (
                             <div key={idx} className={`bg-white p-6 rounded-2xl shadow-sm border-2 border-${member.color}-200 hover:-translate-y-2 transition-transform duration-300`}>
-                            <div className={`w-20 h-20 mx-auto bg-${member.color}-500 rounded-full flex items-center justify-center mb-4 text-white shadow-md`}>
-                                <span className="text-3xl">☺</span>
-                            </div>
+                            <div className={`w-20 h-20 mx-auto bg-${member.color}-500 rounded-full flex items-center justify-center mb-4 text-white shadow-md`}><span className="text-3xl">☺</span></div>
                             <h3 className={`font-bold text-lg text-${member.color}-700 mb-1`}>{member.name}</h3>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Estudiante de Trabajo Social</p>
                             </div>
                         ))}
-                        </div>
-
-                        <div className="bg-blue-100 border border-blue-200 rounded-2xl p-6 md:p-8 shadow-inner">
-                        <p className="text-blue-900 font-medium text-lg flex items-center justify-center gap-2">
-                            <Heart className="fill-blue-500 text-blue-500 shrink-0" size={24} />
-                            Este proyecto nace del compromiso de futuros trabajadores sociales por crear una sociedad más justa y protectora para nuestros adultos mayores.
-                            <Heart className="fill-blue-500 text-blue-500 shrink-0" size={24} />
-                        </p>
                         </div>
                     </div>
                     </section>
