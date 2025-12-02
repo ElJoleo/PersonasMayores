@@ -16,8 +16,6 @@
     <style>
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
         .rotate-3 { transform: rotate(3deg); }
     </style>
 </head>
@@ -27,16 +25,14 @@
 
     <script type="text/babel">
         // --- 1. CONFIGURACIÓN INICIAL ---
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         // --- 2. ADAPTADOR DE ICONOS (Para que funcionen en HTML) ---
-        // Este bloque convierte los nombres de Lucide React a etiquetas HTML <i>
         const Icon = ({ name, size = 24, className = "" }) => {
-            // Renderizamos un 'i' que lucide.createIcons transformará en SVG
             return <i data-lucide={name} width={size} height={size} className={className}></i>;
         };
 
-        // Definimos los componentes de iconos que usas en tu código original
+        // Definimos los componentes de iconos necesarios
         const Shield = (p) => <Icon name="shield" {...p} />;
         const Phone = (p) => <Icon name="phone" {...p} />;
         const Users = (p) => <Icon name="users" {...p} />;
@@ -45,245 +41,15 @@
         const Lock = (p) => <Icon name="lock" {...p} />;
         const Heart = (p) => <Icon name="heart" {...p} />;
         const Info = (p) => <Icon name="info" {...p} />;
-        const MessageCircle = (p) => <Icon name="message-circle" {...p} />;
-        const Menu = (p) => <Icon name="menu" {...p} />;
-        const X = (p) => <Icon name="x" {...p} />;
         const CreditCard = (p) => <Icon name="credit-card" {...p} />;
         const AlertTriangle = (p) => <Icon name="alert-triangle" {...p} />;
         const CheckCircle2 = (p) => <Icon name="check-circle-2" {...p} />;
         const PhoneCall = (p) => <Icon name="phone-call" {...p} />;
         const Landmark = (p) => <Icon name="landmark" {...p} />;
-        const Play = (p) => <Icon name="play" {...p} />;
         const Video = (p) => <Icon name="video" {...p} />;
-        const Search = (p) => <Icon name="search" {...p} />;
-        const Send = (p) => <Icon name="send" {...p} />;
-        const Loader2 = (p) => <Icon name="loader-2" {...p} />;
-        const Bot = (p) => <Icon name="bot" {...p} />;
-        const Sparkles = (p) => <Icon name="sparkles" {...p} />;
+        const Play = (p) => <Icon name="play" {...p} />;
 
-
-        // --- 3. LÓGICA DE GEMINI API (Llama al servidor seguro /api/chat) ---
-        async function callGeminiAPI(prompt, systemInstruction = "") {
-            // Se asume que el error de clave se maneja en el servidor (api/chat.js)
-            const url = `/api/chat`; 
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    // Enviamos solo el mensaje del usuario (prompt) al servidor
-                    body: JSON.stringify({ prompt: prompt }) 
-                });
-
-                // Si la función Serverless devuelve un error (500), lanzamos una excepción
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    // Retornamos el mensaje de error del servidor
-                    return errorData.text || "Hubo un problema temporal al comunicarse con el asistente. Por favor intente de nuevo más tarde.";
-                }
-                
-                const data = await response.json();
-                // Retornamos la respuesta de texto desde el servidor
-                return data.text || "Lo siento, no pude entender eso. ¿Podría repetirlo?";
-            } catch (error) {
-                console.error("Error al llamar a la función Serverless:", error);
-                // Si falla la conexión de red
-                return "Hubo un problema de conexión. Verifique su red.";
-            }
-        }
-
-        // --- 4. TUS COMPONENTES ---
-
-        // Componente del Analizador de Estafas
-        const ScamAnalyzer = ({ fontClass }) => {
-            const [inputText, setInputText] = useState("");
-            const [result, setResult] = useState(null);
-            const [loading, setLoading] = useState(false);
-
-            const handleAnalyze = async () => {
-                if (!inputText.trim()) return;
-                setLoading(true);
-                setResult(null);
-
-                // El systemPrompt ahora está codificado en api/chat.js
-                const userPrompt = `Analiza este mensaje que recibí: "${inputText}"`;
-                
-                const response = await callGeminiAPI(userPrompt); 
-                setResult(response);
-                setLoading(false);
-            };
-
-            return (
-                <section className="py-16 px-4 bg-gradient-to-br from-indigo-50 to-purple-50">
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-purple-100">
-                    <div className="bg-purple-700 p-6 text-white text-center">
-                        <div className="flex justify-center mb-3">
-                        <Sparkles className="w-12 h-12 text-yellow-300 animate-pulse" />
-                        </div>
-                        <h2 className="text-2xl md:text-3xl font-bold mb-2">Analizador de Mensajes ✨</h2>
-                        <p className="text-purple-100">¿Recibió un mensaje extraño? Péguelo aquí y nuestra Inteligencia Artificial le dirá si es seguro.</p>
-                    </div>
-                    
-                    <div className="p-6 md:p-8">
-                        <label className="block text-gray-700 font-bold mb-2 text-lg">Escriba o pegue el mensaje aquí:</label>
-                        <textarea
-                        className="w-full p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:ring focus:ring-purple-200 transition-all text-lg h-32 resize-none"
-                        placeholder='Ejemplo: "Hola abuela, cambié mi número, necesito dinero urgente..."'
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        ></textarea>
-                        
-                        <div className="mt-4 flex justify-end">
-                        <button 
-                            onClick={handleAnalyze}
-                            disabled={loading || !inputText}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-bold text-white text-lg shadow-lg transition-all ${loading || !inputText ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 hover:scale-105'}`}
-                        >
-                            {loading ? <Loader2 className="animate-spin" /> : <Search size={24} />}
-                            {loading ? "Analizando..." : "Analizar Mensaje"}
-                        </button>
-                        </div>
-
-                        {result && (
-                        <div className="mt-8 bg-purple-50 rounded-2xl p-6 border-l-8 border-purple-600 animate-fade-in">
-                            <h3 className="text-xl font-bold text-purple-800 mb-3 flex items-center gap-2">
-                            <Bot size={28} /> Respuesta del Asistente:
-                            </h3>
-                            <div className={`prose max-w-none text-gray-800 whitespace-pre-wrap leading-relaxed ${fontClass}`}>
-                            {result}
-                            </div>
-                        </div>
-                        )}
-                    </div>
-                    </div>
-                </div>
-                </section>
-            );
-        };
-
-        // Componente del Chatbot Flotante
-        const FloatingChatbot = ({ fontClass }) => {
-            const [isOpen, setIsOpen] = useState(false);
-            const [messages, setMessages] = useState([
-                { role: 'system', text: '¡Hola! Soy su asistente virtual "Protector Mayor". Estoy aquí para responder sus dudas sobre seguridad y tecnología. ¿En qué puedo ayudarle hoy?' }
-            ]);
-            const [input, setInput] = useState("");
-            const [isTyping, setIsTyping] = useState(false);
-            const chatEndRef = useRef(null);
-
-            useEffect(() => {
-                if (isOpen && chatEndRef.current) {
-                chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-                }
-            }, [messages, isOpen]);
-
-            const handleSend = async () => {
-                if (!input.trim()) return;
-
-                const userMsg = input;
-                setInput("");
-                setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-                setIsTyping(true);
-
-                // Aunque el Serverless Function tiene un systemPrompt, enviamos el contexto para la conversación
-                const recentContext = messages.slice(-4).map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.text}`).join('\n');
-                const fullPrompt = `${recentContext}\nUsuario: ${userMsg}\nAsistente:`;
-
-                const reply = await callGeminiAPI(fullPrompt); 
-                
-                setMessages(prev => [...prev, { role: 'system', text: reply }]);
-                setIsTyping(false);
-            };
-
-            return (
-                <React.Fragment>
-                {/* Botón Flotante */}
-                {!isOpen && (
-                    <div className="fixed bottom-6 right-6 z-50">
-                    <button 
-                        onClick={() => setIsOpen(true)}
-                        className="bg-blue-800 hover:bg-blue-900 text-white p-4 rounded-full shadow-lg flex items-center gap-2 transition-transform hover:scale-105 border-4 border-white"
-                    >
-                        <MessageCircle size={32} />
-                        <span className="font-bold text-lg hidden md:inline">Asistente Virtual ✨</span>
-                    </button>
-                    </div>
-                )}
-
-                {/* Ventana de Chat */}
-                {isOpen && (
-                    <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[80vh] overflow-hidden animate-slide-up">
-                    {/* Header */}
-                    <div className="bg-blue-800 p-4 text-white flex justify-between items-center shadow-md">
-                        <div className="flex items-center gap-3">
-                        <div className="bg-white/20 p-2 rounded-full">
-                            <Bot size={24} />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg leading-tight">Protector Mayor ✨</h3>
-                            <p className="text-xs text-blue-200">Siempre aquí para ayudarle</p>
-                        </div>
-                        </div>
-                        <button onClick={() => setIsOpen(false)} className="hover:bg-blue-700 p-1 rounded-full transition-colors">
-                        <X size={24} />
-                        </button>
-                    </div>
-
-                    {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-4">
-                        {messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div 
-                            className={`max-w-[85%] p-3 rounded-2xl text-lg ${
-                                msg.role === 'user' 
-                                ? 'bg-blue-600 text-white rounded-br-none' 
-                                : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
-                            } ${fontClass}`}
-                            >
-                            {msg.text}
-                            </div>
-                        </div>
-                        ))}
-                        {isTyping && (
-                        <div className="flex justify-start">
-                            <div className="bg-gray-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center">
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-75"></div>
-                            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150"></div>
-                            </div>
-                        </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </div>
-
-                    {/* Input Area */}
-                    <div className="p-4 bg-white border-t border-gray-100">
-                        <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Escriba su duda aquí..."
-                            className="flex-1 p-3 border border-gray-300 rounded-full focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-lg"
-                        />
-                        <button 
-                            onClick={handleSend}
-                            disabled={!input.trim() || isTyping}
-                            className={`p-3 rounded-full text-white transition-colors ${!input.trim() ? 'bg-gray-300' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                            <Send size={24} />
-                        </button>
-                        </div>
-                    </div>
-                    </div>
-                )}
-                </React.Fragment>
-            );
-        };
-
-        // Componente Principal
+        // --- 3. COMPONENTE PRINCIPAL (APP) ---
         const App = () => {
             const [fontSizeLevel, setFontSizeLevel] = useState(1);
             
@@ -298,21 +64,16 @@
 
             const fontClass = getFontSizeClass();
 
-            // Esto hace que los iconos se rendericen cuando React termine
+            // Renderizar iconos
             useEffect(() => {
                 lucide.createIcons();
-            });
-            // También necesitamos ejecutarlo cuando cambie algo en la interfaz
-            useEffect(() => {
-                lucide.createIcons();
-            }, [fontSizeLevel, /* otras dependencias si hubiera */]);
+            }, [fontSizeLevel]);
 
 
             return (
                 <div className={`min-h-screen bg-gray-50 font-sans text-gray-800 ${fontClass} transition-all duration-300`}>
                 
-                <FloatingChatbot fontClass={fontClass} />
-
+                {/* BARRA DE NAVEGACIÓN */}
                 <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-40 py-3 px-4 md:px-8">
                     <div className="max-w-6xl mx-auto flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -538,8 +299,6 @@
                     </div>
                     </section>
 
-                    {/* GEMINI SCAM ANALYZER SECTION */}
-                    <ScamAnalyzer fontClass={fontClass} />
 
                     {/* EDUCATIONAL VIDEOS SECTION */}
                     <section className="py-16 px-4 bg-white">
@@ -553,59 +312,61 @@
                         </div>
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {/* Video 1 */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
-                            <div className="relative h-48 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
-                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Play className="text-white fill-white ml-1" size={32} />
-                            </div>
-                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">3:45</span>
+                        
+                        {/* Video 1: Cuento del tío */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
+                            <div className="relative bg-black h-56 flex items-center justify-center">
+                                <video 
+                                    controls 
+                                    className="w-full h-full object-contain"
+                                    preload="metadata"
+                                >
+                                    <source src="videos/cuento-tio.mp4" type="video/mp4" />
+                                    Su navegador no soporta la reproducción de video.
+                                </video>
                             </div>
                             <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-purple-700">Cómo detectar "El Cuento del Tío"</h3>
+                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cómo detectar "El Cuento del Tío"</h3>
                             <p className="text-gray-600 text-sm mb-4">Aprenda a identificar las señales en una llamada telefónica falsa y qué hacer inmediatamente.</p>
-                            <button className="text-purple-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                                Ver Video Ahora <Play size={14} className="fill-purple-600" />
-                            </button>
                             </div>
                         </div>
 
-                        {/* Video 2 */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
-                            <div className="relative h-48 bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
-                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Play className="text-white fill-white ml-1" size={32} />
-                            </div>
-                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">2:30</span>
+                        {/* Video 2: Cajero Automático */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
+                            <div className="relative bg-black h-56 flex items-center justify-center">
+                                <video 
+                                    controls 
+                                    className="w-full h-full object-contain"
+                                    preload="metadata"
+                                >
+                                    <source src="videos/cajero-seguro.mp4" type="video/mp4" />
+                                    Su navegador no soporta la reproducción de video.
+                                </video>
                             </div>
                             <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-green-700">Cajero Automático Seguro</h3>
+                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cajero Automático Seguro</h3>
                             <p className="text-gray-600 text-sm mb-4">Consejos prácticos para proteger su clave y su dinero al ir al banco o usar un cajero.</p>
-                            <button className="text-green-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                                Ver Video Ahora <Play size={14} className="fill-green-600" />
-                            </button>
                             </div>
                         </div>
 
-                        {/* Video 3 */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden group cursor-pointer hover:shadow-xl transition-all">
-                            <div className="relative h-48 bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
-                            <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Play className="text-white fill-white ml-1" size={32} />
-                            </div>
-                            <span className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded">4:10</span>
+                        {/* Video 3: Links / Phishing */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all">
+                             <div className="relative bg-black h-56 flex items-center justify-center">
+                                <video 
+                                    controls 
+                                    className="w-full h-full object-contain"
+                                    preload="metadata"
+                                >
+                                    <source src="videos/phishing-links.mp4" type="video/mp4" />
+                                    Su navegador no soporta la reproducción de video.
+                                </video>
                             </div>
                             <div className="p-6">
-                            <h3 className="font-bold text-xl text-gray-800 mb-2 group-hover:text-orange-700">Cuidado con los Links (SMS/WhatsApp)</h3>
-                            <p className="text-gray-600 text-sm mb-4">Explicación sencilla sobre el "Phishing" y por qué nunca debe abrir enlaces desconocidos.</p>
-                            <button className="text-orange-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                                Ver Video Ahora <Play size={14} className="fill-orange-600" />
-                            </button>
+                            <h3 className="font-bold text-xl text-gray-800 mb-2">Cuidado con los Links</h3>
+                            <p className="text-gray-600 text-sm mb-4">Explicación sencilla sobre el "Phishing" y por qué nunca debe abrir enlaces desconocidos en SMS o WhatsApp.</p>
                             </div>
                         </div>
+
                         </div>
                     </div>
                     </section>
