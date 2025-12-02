@@ -19,6 +19,19 @@
         .rotate-3 { transform: rotate(3deg); }
         .scroll-smooth { scroll-behavior: smooth; }
         
+        /* Animación para el texto BETA */
+        @keyframes ticker {
+            0% { transform: translateX(100%); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(-100%); opacity: 0; }
+        }
+        .beta-ticker {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 5s linear infinite;
+        }
+
         /* Clases para Accesibilidad */
         .high-contrast {
             background-color: #000000 !important;
@@ -34,6 +47,11 @@
         }
         .high-contrast .quiz-card {
             border: 2px solid #FFFF00;
+        }
+        .high-contrast .text-gradient {
+            background: none !important;
+            -webkit-text-fill-color: #FFFF00 !important;
+            color: #FFFF00 !important;
         }
         
         .big-cursor {
@@ -78,6 +96,7 @@
         const HelpCircle = (p) => <Icon name="help-circle" {...p} />;
         const XCircle = (p) => <Icon name="x-circle" {...p} />;
         const Trophy = (p) => <Icon name="trophy" {...p} />;
+        const Construction = (p) => <Icon name="construction" {...p} />;
 
         // --- COMPONENTE DE ACCESIBILIDAD ---
         const AccessibilityMenu = ({ onHighContrast, onBigCursor, onSpeechToggle, isSpeechActive }) => {
@@ -128,7 +147,7 @@
         // --- COMPONENTE QUIZ (TRIVIA) ---
         const QuizSection = () => {
             const [currentQuestion, setCurrentQuestion] = useState(0);
-            const [showResult, setShowResult] = useState(false); // Muestra feedback intermedio
+            const [showResult, setShowResult] = useState(false);
             const [isCorrect, setIsCorrect] = useState(false);
             const [showFinalScore, setShowFinalScore] = useState(false);
 
@@ -267,7 +286,6 @@
                 }
             };
             
-            // Efecto para Alto Contraste
             useEffect(() => {
                 if (highContrast) {
                     document.body.classList.add('high-contrast');
@@ -276,7 +294,6 @@
                 }
             }, [highContrast]);
 
-            // Efecto para Cursor Gigante
             useEffect(() => {
                 if (bigCursor) {
                     document.body.classList.add('big-cursor');
@@ -285,7 +302,6 @@
                 }
             }, [bigCursor]);
 
-            // Manejador de Lectura de Voz
             useEffect(() => {
                 const handleSpeechClick = (e) => {
                     if (!speechMode) return;
@@ -342,12 +358,24 @@
                     isSpeechActive={speechMode}
                 />
 
-                <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm shadow-sm z-40 py-3 px-4 md:px-8 no-contrast-change">
+                <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-md z-40 py-3 px-4 md:px-8 no-contrast-change border-b border-purple-100">
                     <div className="max-w-6xl mx-auto flex justify-between items-center">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <Shield className="text-purple-600 fill-purple-100" size={32} />
-                        <span className="font-bold text-xl md:text-2xl text-purple-800">Protección Mayor</span>
+                        <div className="flex flex-col">
+                            <span className="font-extrabold text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-blue-600 text-gradient">
+                                Protección Mayor
+                            </span>
+                            
+                            {/* ANIMACIÓN DE TEXTO CORRIENDO (BETA) */}
+                            <div className="w-32 h-4 overflow-hidden relative bg-yellow-100 rounded-sm border border-yellow-200">
+                                <span className="beta-ticker text-[10px] font-bold text-yellow-700 uppercase tracking-widest absolute top-[1px]">
+                                    ⚠ Página en Beta - ⚠ Página en Beta -
+                                </span>
+                            </div>
+                        </div>
                     </div>
+
                     <div className="flex items-center gap-4">
                         <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-inner border border-gray-200">
                         <button onClick={() => setFontSizeLevel(0)} className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${fontSizeLevel === 0 ? 'bg-purple-600 text-white font-bold' : 'text-gray-600 hover:bg-gray-200'}`}>A</button>
@@ -358,7 +386,7 @@
                     </div>
                 </nav>
 
-                <main className="pt-20">
+                <main className="pt-24">
                     
                     {/* HERO SECTION */}
                     <section className="bg-gradient-to-r from-blue-700 via-purple-700 to-pink-600 text-white py-16 px-4 relative overflow-hidden">
@@ -575,14 +603,21 @@
                         <p className="text-gray-600 text-lg mb-12">Estudiantes de Primer Año de Trabajo Social - AIEP</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-12">
                         {[
-                            { name: 'Estefanía Díaz', color: 'blue' },
-                            { name: 'José Huanel', color: 'purple' },
-                            { name: 'Juanita Quintero', color: 'pink' },
-                            { name: 'María Jesús Sobarzo', color: 'red' }
+                            { name: 'Estefanía Díaz', color: 'blue', role: 'Estudiante de Trabajo Social' },
+                            { name: 'José Huanel', color: 'purple', role: 'Creador de la página y Estudiante de Trabajo Social' },
+                            { name: 'Juanita Quintero', color: 'pink', role: 'Estudiante de Trabajo Social' },
+                            { name: 'María Jesús Sobarzo', color: 'red', role: 'Estudiante de Trabajo Social' }
                         ].map((member, idx) => (
-                            <div key={idx} className={`bg-white p-6 rounded-2xl shadow-sm border-2 border-${member.color}-200 hover:-translate-y-2 transition-transform duration-300`}>
-                            <div className={`w-20 h-20 mx-auto bg-${member.color}-500 rounded-full flex items-center justify-center mb-4 text-white shadow-md`}><span className="text-3xl">☺</span></div>
-                            <h3 className={`font-bold text-lg text-${member.color}-700 mb-1`}>{member.name}</h3>
+                            <div key={idx} className={`bg-white p-6 rounded-2xl shadow-sm border-2 border-${member.color}-200 hover:-translate-y-2 transition-transform duration-300 flex flex-col h-full`}>
+                                <div className={`w-20 h-20 mx-auto bg-${member.color}-500 rounded-full flex items-center justify-center mb-4 text-white shadow-md shrink-0`}>
+                                    <span className="text-3xl">☺</span>
+                                </div>
+                                <div className="flex-1 flex flex-col justify-between">
+                                    <h3 className={`font-bold text-lg text-${member.color}-700 mb-2`}>{member.name}</h3>
+                                    <p className={`text-xs ${member.color === 'purple' ? 'font-bold text-purple-800 bg-purple-100 p-2 rounded-lg' : 'text-gray-500'} uppercase tracking-wide leading-tight`}>
+                                        {member.role}
+                                    </p>
+                                </div>
                             </div>
                         ))}
                         </div>
